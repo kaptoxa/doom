@@ -1,0 +1,10 @@
+.DS_Store
+.idea
+*.log
+tmp/
+aragaers-tweaks.el
+custom.el
+flycheck_init.el
+literate-config.el
+packages.el
+rasendubi-slip-boxes.el

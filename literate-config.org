@@ -26,16 +26,34 @@
 (setq org-roam-directory "~/roam/")
 #+end_src
 
+** Bullets
+#+begin_src emacs-lisp
+(use-package org-bullets
+  :ensure t
+  :config
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+#+end_src
+
+** Habits
+#+begin_src emacs-lisp
+(use-package! org-habit
+  :after org
+  :config
+  (setq org-habit-following-days 7
+        org-habit-preceding-days 35
+        org-habit-show-habits t
+        org-habit-graph-column 80))
+#+end_src
 ** Custom agenda
 #+begin_src emacs-lisp
 (after! org
+    (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
           '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "|"
                       "DONE(d!)" "CANCELLED(c)")))
 
     (setq org-agenda-span 1)
     (setq org-agenda-start-day "0d")
-;;    (setq org-agenda-start-on-day t)
     (setq org-log-done 'note)
     (setq org-priority-default 65)
 
@@ -46,8 +64,6 @@
 
     (setq org-agenda-todo-ignore-timestamp 'future)
     (setq org-agenda-todo-ignore-scheduled 'future)
-
-    (setq org-habit-graph-column 50)
 
     (setq org-agenda-custom-commands
         '(("j" "Jedi task list"
