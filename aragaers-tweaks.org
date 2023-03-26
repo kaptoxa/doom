@@ -1,0 +1,146 @@
+#+STARTUP: overview
+* Roam tweaks
+** Wrap db update into a single transaction
+Speeds up the save greatly
+#+begin_src emacs-lisp
+(after! org-roam
+  (advice-add 'org-roam-db-update-file :around
+                (defun +org-roam-db-update-file (fn &rest args)
+                    (emacsql-with-transaction (org-roam-db)
+                      (apply fn args))))
+  )
+#+end_src
+
+#+RESULTS:
+
+** Org-agenda in roam
+#+begin_src emacs-lisp
+(after! org
+  (defun aragaer/add-to-agenda-maybe ()
+    (unless (member (buffer-file-name) (org-agenda-files))
+      (org-agenda-file-to-front)))
+
+  (defun aragaer/remove-from-agenda-maybe (&optional filename)
+    (let ((filename (or filename (buffer-file-name))))
+      (if (member filename (org-agenda-files))
+          (org-remove-file filename))))
+
+  (defun aragaer/get-filetags ()
+    (split-string (or (cadr (assoc "FILETAGS"
+                                   (org-collect-keywords '("filetags"))))
+                      "")
+                  ":" 'omit-nulls))
+
+  (defun aragaer/project-update-tag ()
+    "Update PROJECT tag in the current buffer."
+    (let ((tags (aragaer/get-filetags)))
+      (if (vulpea-project-p)
+          (unless (member "project" tags)
+            (org-roam-tag-add '("project")))
+        (when (member "project" tags)
+          (org-roam-tag-remove '("project"))))))
+
+  (defun aragaer/update-agenda ()
+    "Add or remove roam file to agenda."
+    (when (and (not (active-minibuffer-window))
+               (fboundp 'org-roam-buffer-p)
+               (org-roam-buffer-p))
+      (save-excursion
+        (goto-char (point-min))
+        (aragaer/project-update-tag)
+        (let ((tags (aragaer/get-filetags)))
+          (if (or (member "agenda" tags)
+                  (member "project" tags))
+              (aragaer/add-to-agenda-maybe)
+            (aragaer/remove-from-agenda-maybe))))))
+
+    (add-hook 'find-file-hook #'aragaer/update-agenda)
+    (add-hook 'before-save-hook #'aragaer/update-agenda)
+    )
+#+end_src
+
+#+RESULTS:
+| aragaer/update-agenda |
+
+*** Roam agenda category
+#+begin_src emacs-lisp
+(after! org
+    (setq org-agenda-prefix-format
+            '((agenda . " %i %-12(aragaer/agenda-category) %?-12t% s")
+            (todo . " %i %-12(aragaer/agenda-category) ")
+            (tags . " %i %-12(aragaer/agenda-category) ")
+            (search . " %i %-12(aragaer/agenda-category) ")))
+    (defun aragaer/agenda-category ()
+        "Get category of item at point for agenda.
+
+    Category is defined by one of the following items:
+
+    - CATEGORY property
+    - TITLE keyword or property for org-roam nodes
+    - filename without directory and extension
+
+    Usage example:
+
+        (setq org-agenda-prefix-format
+            '((agenda . \" %(aragaer/agenda-category) %?-12t %12s\")))
+
+    Refer to `org-agenda-prefix-format' for more information."
+        (let ((file-name (when buffer-file-name
+                        (file-name-sans-extension
+                            (file-name-nondirectory buffer-file-name))))
+            (parent-title (when (org-roam-buffer-p)
+                            (save-excursion
+                                (org-up-heading-or-point-min)
+                                (let ((node (org-roam-node-at-point)))
+                                (and node (org-roam-node-title node))))))
+            (category (org-get-category)))
+        (if (and parent-title
+                (string-equal category file-name))
+            parent-title
+            (or category ""))))
+    )
+#+end_src
+
+#+RESULTS:
+: aragaer/agenda-category
+
+*** Helper function for determining if roam-file has TODO items in it
+#+begin_src emacs-lisp
+(after! org
+(defun vulpea-project-p ()
+  "Return non-nil if current buffer has any todo entry.
+
+TODO entries marked as done are ignored, meaning the this
+function returns nil if current buffer contains only completed
+tasks."
+  (org-element-map
+      (org-element-parse-buffer 'headline)
+      'headline
+    (lambda (h)
+      (eq (org-element-property :todo-type h)
+          'todo))
+    nil 'first-match))
+)
+#+end_src
+
+#+RESULTS:
+: vulpea-project-p
+
+** Do not inherit certain tags
+#+begin_src emacs-lisp
+(after! org
+  (setq org-tags-exclude-from-inheritance
+        (append '("project" "next" "agenda" "here" "ATTACH")
+                org-tags-exclude-from-inheritance))
+
+  (defun aragaer/remove-hash-tags (tags)
+    (mapcar
+     (lambda (tag-list)
+       (cl-remove ?# tag-list :key #'string-to-char :test #'char-equal))
+     tags))
+
+  (advice-add 'org-remove-uninherited-tags :filter-args #'aragaer/remove-hash-tags)
+  )
+#+end_src
+
+#+RESULTS:

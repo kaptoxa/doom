@@ -1,0 +1,71 @@
+* Font and coding
+#+BEGIN_SRC  emacs-lisp
+(setq doom-font (font-spec :family "Input" :size 15 :weight 'normal)
+      doom-variable-pitch-font (font-spec :family "Input" :size 16))
+
+(after! unicode-fonts
+  (dolist (unicode-block '("Cyrillic"
+                           "Cyrillic Supplement"))
+      (push "Input" (cadr (assoc unicode-block unicode-fonts-block-font-mapping)))))
+#+END_SRC
+
+* Input-method
+#+begin_src emacs-lisp
+(set-input-method 'russian-computer)
+(isearch-toggle-input-method)
+
+(map! "C-c d" #'toggle-input-method)
+(map! :map evil-ex-search-keymap "C-d" #'toggle-input-method)
+#+end_src
+
+* Org
+** Directories
+#+begin_src emacs-lisp
+(setq org-directory "~/roam")
+(setq org-agenda-files "~/roam/.agenda_files")
+(setq org-roam-directory "~/roam/")
+#+end_src
+
+** Custom agenda
+#+begin_src emacs-lisp
+(after! org
+    (setq org-todo-keywords
+          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "|"
+                      "DONE(d!)" "CANCELLED(c)")))
+
+    (setq org-agenda-span 1)
+    (setq org-agenda-start-day "0d")
+;;    (setq org-agenda-start-on-day t)
+    (setq org-log-done 'note)
+    (setq org-priority-default 65)
+
+    (setq org-sort-agenda-notime-is-late nil)
+    (setq org-agenda-tags-todo-honor-ignore-options t)
+    (setq org-agenda-todo-ignore-time-comparison-use-seconds t)
+    (setq org-agenda-skip-scheduled-if-done t)
+
+    (setq org-agenda-todo-ignore-timestamp 'future)
+    (setq org-agenda-todo-ignore-scheduled 'future)
+
+    (setq org-habit-graph-column 50)
+
+    (setq org-agenda-custom-commands
+        '(("j" "Jedi task list"
+            ((tags-todo "TODO=\"TODO\"+PRIORITY=\"A\""
+                    ((org-agenda-overriding-header "\nToday")
+                    (org-agenda-todo-ignore-scheduled 'all)))
+            (agenda "")
+            (tags "Closed>=\"<today>\""
+                ((org-agenda-overriding-header "Done")))
+            (tags-todo "TODO=\"PROJ\""
+                ((org-agenda-overriding-header "Projects")))))
+            ))
+)
+#+end_src
+
+** Roam
+#+begin_src emacs-lisp
+(after! org-roam
+    (setq org-roam-complete-everywhere t)
+)
+#+end_src
