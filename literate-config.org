@@ -28,8 +28,8 @@
 
 ** Bullets
 #+begin_src emacs-lisp
-(use-package org-bullets
-  :ensure t
+(use-package! org-bullets
+  :after org
   :config
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 #+end_src
@@ -43,6 +43,15 @@
         org-habit-preceding-days 35
         org-habit-show-habits t
         org-habit-graph-column 80))
+#+end_src
+** Capture template
+#+begin_src emacs-lisp
+(after! org
+  (setq org-capture-templates
+        `(("t" "Task to inbox" entry  (file "areas/einbox.org")
+                          ,(concat "* TODO %?\n"
+                                          "/Entered on/ %U")
+                          :prepend t :kill-buffer t))))
 #+end_src
 ** Custom agenda
 #+begin_src emacs-lisp
@@ -82,6 +91,12 @@
 ** Roam
 #+begin_src emacs-lisp
 (after! org-roam
-    (setq org-roam-complete-everywhere t)
+    (setq org-roam-dailies-directory "daily/")
+    (setq org-roam-dailies-capture-templates
+      `(("d" "default" entry
+         "* %<%H-%M> %? :review:"
+         :if-new
+            (file+head "%(concat org-roam-dailies-directory \"/%<%Y-%m-%d>.org\")"
+                    "#+title: %<%Y-%m-%d>"))))
 )
 #+end_src
