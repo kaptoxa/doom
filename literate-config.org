@@ -21,7 +21,7 @@
 * Org
 ** Directories
 #+begin_src emacs-lisp
-(setq org-directory "~/roam")
+(setq org-directory "~/roam/areas")
 (setq org-agenda-files "~/roam/.agenda_files")
 (setq org-roam-directory "~/roam/")
 #+end_src
@@ -99,4 +99,46 @@
             (file+head "%(concat org-roam-dailies-directory \"/%<%Y-%m-%d>.org\")"
                     "#+title: %<%Y-%m-%d>"))))
 )
+#+end_src
+** Spaced repetition
+#+begin_src emacs-lisp
+(defun my/space-repeat-if-tag-spaced (e)
+  "Resets the header on the TODO states and increases the date
+according to a suggested spaced repetition interval."
+  (let* ((spaced-rep-map '((0 . "++1d")
+                           (1 . "++2d")
+                           (2 . "++7d")
+                           (3 . "++23d")
+                           (4 . "++60d")
+                           (5 . "++4m")))
+         (spaced-key "spaced")
+         (tags (org-get-tags))
+         (spaced-todo-p (member spaced-key tags))
+         (repetition-n (car (cdr spaced-todo-p)))
+         (n+1 (if repetition-n (+ 1 (string-to-number (substring repetition-n (- (length repetition-n) 1) (length repetition-n)))) 0))
+         (spaced-repetition-p (alist-get n+1 spaced-rep-map))
+         (new-repetition-tag (concat "repetition" (number-to-string n+1)))
+         (new-tags (reverse (if repetition-n
+                                (seq-reduce
+                                 (lambda (a x) (if (string-equal x repetition-n) (cons new-repetition-tag a) (cons x a)))
+                                 tags
+                                 '())
+                              (seq-reduce
+                               (lambda (a x) (if (string-equal x spaced-key) (cons new-repetition-tag (cons x a)) (cons x a)))
+                               tags
+                               '())))))
+    (if (and spaced-todo-p spaced-repetition-p)
+        (progn
+          ;; avoid infinitive looping
+          (remove-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
+          ;; reset to previous state
+          (org-call-with-arg 'org-todo 'left)
+          ;; schedule to next spaced repetition
+          (org-schedule nil (alist-get n+1 spaced-rep-map))
+          ;; rewrite local tags
+          (org-set-tags-to new-tags)
+          (add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced))
+      )))
+
+(add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
 #+end_src
