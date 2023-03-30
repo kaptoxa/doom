@@ -58,7 +58,7 @@
 (after! org
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
-          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "|"
+          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "MAGIC(m)" "|"
                       "DONE(d!)" "CANCELLED(c)")))
 
     (setq org-agenda-span 1)
@@ -94,10 +94,10 @@
     (setq org-roam-dailies-directory "daily/")
     (setq org-roam-dailies-capture-templates
       `(("d" "default" entry
-         "* %<%H-%M> %? :review:"
+         "* %<%H-%M> %?"
          :if-new
             (file+head "%(concat org-roam-dailies-directory \"/%<%Y-%m-%d>.org\")"
-                    "#+title: %<%Y-%m-%d>"))))
+                    "#+title: %<%Y-%m-%d>\n#+filetags: review"))))
 )
 #+end_src
 ** Spaced repetition
