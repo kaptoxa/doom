@@ -71,6 +71,11 @@
     (setq org-agenda-todo-ignore-time-comparison-use-seconds t)
     (setq org-agenda-skip-scheduled-if-done t)
 
+    (setq org-agenda-time-grid
+        '(nil
+        (800 1000 1200 1400 1600 1800 2000)
+        "......" "----------------"))
+
     (setq org-agenda-todo-ignore-timestamp 'future)
     (setq org-agenda-todo-ignore-scheduled 'future)
 
