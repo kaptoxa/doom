@@ -48,7 +48,7 @@
 #+begin_src emacs-lisp
 (after! org
   (setq org-capture-templates
-        `(("t" "Task to inbox" entry  (file "areas/einbox.org")
+        `(("t" "Task to inbox" entry  (file "inbox.org")
                           ,(concat "* TODO %?\n"
                                           "/Entered on/ %U")
                           :prepend t :kill-buffer t))))
