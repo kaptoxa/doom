@@ -3,6 +3,8 @@
 (setq doom-font (font-spec :family "Input" :size 15 :weight 'normal)
       doom-variable-pitch-font (font-spec :family "Input" :size 16))
 
+(set-clipboard-coding-system 'utf-16le-dos)
+
 (after! unicode-fonts
   (dolist (unicode-block '("Cyrillic"
                            "Cyrillic Supplement"))
@@ -58,7 +60,7 @@
 (after! org
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
-          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "MAGIC(m)" "|"
+          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "PLAY(y)" "|"
                       "DONE(d!)" "CANCELLED(c)")))
 
     (setq org-agenda-span 1)
