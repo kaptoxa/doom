@@ -1,7 +1,7 @@
 # doom
 
 * Устанавливаем [[https://www.gnu.org/software/emacs/][Emacs]] версии 28
-* Устанавилваем [[https://chocolatey.org/install][chocolatey]]
+* Устанавилваем [[https://chocolatey.org/install][chocolatey]] (В случае Windows)
   * Устанавливаем fd и ripgrep
     #+begin_src powershell
     choco install fd
