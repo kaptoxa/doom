@@ -61,7 +61,7 @@
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
           '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "PLAY(y)" "WAIT(w!)" "|"
-                      "DONE(d!)")))
+                      "DONE(d!)" "CANCELLED(c)")))
 
     (setq org-agenda-span 1)
     (setq org-agenda-start-day "0d")
@@ -106,6 +106,23 @@
             (file+head "%(concat org-roam-dailies-directory \"/%<%Y-%m-%d>.org\")"
                     "#+title: %<%Y-%m-%d>\n#+filetags: review"))))
 )
+#+end_src
+** Graph
+#+begin_src emacs-lisp
+(use-package! websocket
+    :after org-roam)
+
+(use-package! org-roam-ui
+    :after org-roam ;; or :after org
+;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+;;         a hookable mode anymore, you're advised to pick something yourself
+;;         if you don't care about startup time, use
+;;  :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
 #+end_src
 ** Spaced repetition
 #+begin_src emacs-lisp
@@ -154,4 +171,14 @@ according to a suggested spaced repetition interval."
 (after! projectile
 (setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects"))
 )
+#+end_src
+* PlantUML
+#+begin_src emacs-lisp
+    ;; Sample jar configuration
+    (setq plantuml-jar-path "~/plantuml.jar")
+    (setq plantuml-default-exec-mode 'jar)
+
+    ;; Sample executable configuration
+;;    (setq plantuml-executable-path "/path/to/your/copy/of/plantuml.bin")
+;;    (setq plantuml-default-exec-mode 'executable)
 #+end_src

@@ -50,3 +50,5 @@
 ;(unpin! t)
 (package! org-bullets)
 (package! unfill)
+(unpin! org-roam)
+(package! org-roam-ui)

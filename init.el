@@ -155,9 +155,9 @@
        ;;ocaml             ; an objective camel
        (org +roam2)      ; organize your plain life in plain text
        ;;php               ; perl's insecure younger brother
-       ;;plantuml          ; diagrams for confusing people more
+       plantuml          ; diagrams for confusing people more
        ;;purescript        ; javascript, but functional
-       ;;python            ; beautiful is better than ugly
+       (python +pyenv)            ; beautiful is better than ugly. i've excluded +lsp +pyright +poetry
        ;;qt                ; the 'cutest' gui framework ever
        ;;racket            ; a DSL for DSLs
        ;;raku              ; the artist formerly known as perl6
