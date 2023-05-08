@@ -60,8 +60,8 @@
 (after! org
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
-          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "PLAY(y)" "|"
-                      "DONE(d!)" "CANCELLED(c)")))
+          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "PLAY(y)" "WAIT(w!)" "|"
+                      "DONE(d!)")))
 
     (setq org-agenda-span 1)
     (setq org-agenda-start-day "0d")
@@ -148,4 +148,10 @@ according to a suggested spaced repetition interval."
       )))
 
 (add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
+#+end_src
+* Projectile
+#+begin_src emacs-lisp
+(after! projectile
+(setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects"))
+)
 #+end_src
