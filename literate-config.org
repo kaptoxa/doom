@@ -166,6 +166,12 @@ according to a suggested spaced repetition interval."
 
 (add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
 #+end_src
+* Projectile
+#+begin_src emacs-lisp
+(after! projectile
+(setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects"))
+)
+#+end_src
 * PlantUML
 #+begin_src emacs-lisp
     ;; Sample jar configuration
