@@ -23,9 +23,9 @@
 * Org
 ** Directories
 #+begin_src emacs-lisp
-(setq org-directory "~/roam/areas")
-(setq org-agenda-files "~/roam/.agenda_files")
-(setq org-roam-directory "~/roam/")
+(setq org-directory "~/Dropbox/roam/areas")
+(setq org-agenda-files "~/Dropbox/roam/.agenda_files")
+(setq org-roam-directory "~/Dropbox/roam/")
 #+end_src
 
 ** Bullets
