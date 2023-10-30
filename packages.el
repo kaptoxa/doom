@@ -52,3 +52,4 @@
 (package! unfill)
 (unpin! org-roam)
 (package! org-roam-ui)
+(package! markdown-mode)

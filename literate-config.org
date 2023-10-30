@@ -1,9 +1,9 @@
 * Font and coding
 #+BEGIN_SRC  emacs-lisp
-(setq doom-font (font-spec :family "Input" :size 15 :weight 'normal)
-      doom-variable-pitch-font (font-spec :family "Input" :size 16))
+(setq doom-font (font-spec :family "Input" :size 16 :weight 'normal)
+      doom-variable-pitch-font (font-spec :family "Input" :size 17))
 
-(set-clipboard-coding-system 'utf-16le-dos)
+;; (set-clipboard-coding-system 'utf-16le-dos)
 
 (after! unicode-fonts
   (dolist (unicode-block '("Cyrillic"
@@ -16,16 +16,16 @@
 (set-input-method 'russian-computer)
 (isearch-toggle-input-method)
 
-(map! "C-c d" #'toggle-input-method)
-(map! :map evil-ex-search-keymap "C-d" #'toggle-input-method)
+(map! "s-SPC" #'toggle-input-method)
+(map! :map evil-ex-search-keymap "s-SPC" #'toggle-input-method)
 #+end_src
 
 * Org
 ** Directories
 #+begin_src emacs-lisp
-(setq org-directory "~/Dropbox/roam/areas")
-(setq org-agenda-files "~/Dropbox/roam/.agenda_files")
-(setq org-roam-directory "~/Dropbox/roam/")
+(setq org-directory "~/Yandex.Disk/roam/areas")
+(setq org-agenda-files "~/Yandex.Disk/roam/.agenda_files")
+(setq org-roam-directory "~/Yandex.Disk/roam/")
 #+end_src
 
 ** Bullets
@@ -56,12 +56,16 @@
                           :prepend t :kill-buffer t))))
 #+end_src
 ** Custom agenda
+;; цели чтения (помечаю тегами)
+;; work - для пользы дела
+;; life - философия и художка
+;; play - эрудиция и интерес
+
 #+begin_src emacs-lisp
 (after! org
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
-          '((sequence "TODO(t)" "PROJ(p!)" "IDEA(i)" "PLAY(y)" "WAIT(w!)" "|"
-                      "DONE(d!)" "CANCELLED(c)")))
+          '((sequence "HINT(h)" "READ(r)" "NEXT(n)" "MAP(m)" "LINK(l!)" "|" "DONE(d!)")))
 
     (setq org-agenda-span 1)
     (setq org-agenda-start-day "0d")
@@ -181,4 +185,8 @@ according to a suggested spaced repetition interval."
     ;; Sample executable configuration
 ;;    (setq plantuml-executable-path "/path/to/your/copy/of/plantuml.bin")
 ;;    (setq plantuml-default-exec-mode 'executable)
+#+end_src
+* Clipboard
+#+begin_src emacs-lisp
+(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
 #+end_src
