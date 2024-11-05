@@ -26,6 +26,9 @@
 (setq org-directory "~/Yandex.Disk/roam/areas")
 (setq org-agenda-files "~/Yandex.Disk/roam/.agenda_files")
 (setq org-roam-directory "~/Yandex.Disk/roam/")
+(setq org-roam-db-node-include-function
+      (lambda ()
+        (not (member "linked" (org-get-tags)))))
 #+end_src
 
 ** Bullets
@@ -65,7 +68,7 @@
 (after! org
     (setq org-hide-emphasis-markers t)
     (setq org-todo-keywords
-          '((sequence "HINT(h)" "READ(r)" "NEXT(n)" "MAP(m)" "LINK(l!)" "|" "DONE(d!)")))
+          '((sequence "HINT(h)" "|" "DONE(d!)")))
 
     (setq org-agenda-span 1)
     (setq org-agenda-start-day "0d")
@@ -173,7 +176,7 @@ according to a suggested spaced repetition interval."
 * Projectile
 #+begin_src emacs-lisp
 (after! projectile
-(setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects"))
+(setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects" "~/arcadia/education/schoolbook"))
 )
 #+end_src
 * PlantUML
@@ -189,4 +192,13 @@ according to a suggested spaced repetition interval."
 * Clipboard
 #+begin_src emacs-lisp
 (setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+#+end_src
+* Mermaid
+#+begin_src emacs-lisp
+(setq ob-mermaid-cli-path "~/.local/share/pnpm/mmdc")
+(use-package! ob-mermaid
+  :after org
+  :init
+  (after! org
+    (add-to-list 'org-babel-load-languages '(mermaid . t))))
 #+end_src

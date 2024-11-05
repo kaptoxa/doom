@@ -130,7 +130,7 @@ tasks."
 #+begin_src emacs-lisp
 (after! org
   (setq org-tags-exclude-from-inheritance
-        (append '("project" "next" "agenda" "here" "ATTACH")
+        (append '("project" "next" "agenda" "here" "ATTACH" "book")
                 org-tags-exclude-from-inheritance))
 
   (defun aragaer/remove-hash-tags (tags)
