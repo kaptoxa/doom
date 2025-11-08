@@ -20,6 +20,7 @@ Speeds up the save greatly
     (unless (member (buffer-file-name) (org-agenda-files))
       (org-agenda-file-to-front)))
 
+
   (defun aragaer/remove-from-agenda-maybe (&optional filename)
     (let ((filename (or filename (buffer-file-name))))
       (if (member filename (org-agenda-files))

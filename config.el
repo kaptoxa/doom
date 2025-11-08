@@ -6,8 +6,8 @@
 
 ;; Some functionality uses this to identify you, e.g. GPG configuration, email
 ;; clients, file templates and snippets. It is optional.
-(setq user-full-name "Alex"
-      user-mail-address "kaptoxa@mail.ru")
+;; (setq user-full-name "John Doe"
+;;       user-mail-address "john@doe.com")
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom:
 ;;
@@ -15,7 +15,7 @@
 ;; - `doom-variable-pitch-font' -- a non-monospace font (where applicable)
 ;; - `doom-big-font' -- used for `doom-big-font-mode'; use this for
 ;;   presentations or streaming.
-;; - `doom-unicode-font' -- for unicode glyphs
+;; - `doom-symbol-font' -- for symbols
 ;; - `doom-serif-font' -- for the `fixed-pitch-serif' face
 ;;
 ;; See 'C-h v doom-font' for documentation and more examples of what they
@@ -32,7 +32,7 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-one)
+;; (setq doom-theme 'doom-one)
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
@@ -40,7 +40,6 @@
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
-;;(setq org-directory "~/org/")
 
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
@@ -74,23 +73,44 @@
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
-;; Директория конфигов:
+(setq gnutls-verify-error t)
+(setq tls-program '("gnutls-cli --x509cafile /etc/ssl/certs/ca-certificates.crt -p %p %h"))
+
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("gnu" . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+
 (setq my/config-dir (concat (getenv "HOME") "/.config/doom"))
 
-;; Собирает имя файла конфига по его базовому имени:
 (defun my/make-config-filename (filename)
-    (concat my/config-dir "/" filename))
+  (concat my/config-dir "/" filename))
 
-;; Напишем свою загрузку org-конфигов для ускорения.
-;;   EL-файл не будет пересобираться, если в том не будет необходимости.
 (defun my/org-babel-load-file (base-filename-without-org)
-    (let ((org-filename (concat (my/make-config-filename base-filename-without-org) ".org"))
-          (el-filename (concat (my/make-config-filename base-filename-without-org) ".el")))
-        (if (file-newer-than-file-p org-filename el-filename)
-                (org-babel-load-file org-filename)
-            (load-file el-filename))))
+  (let ((org-filename (concat (my/make-config-filename base-filename-without-org) ".org"))
+        (el-filename (concat (my/make-config-filename base-filename-without-org) ".el")))
+    (if (file-newer-than-file-p org-filename el-filename)
+        (org-babel-load-file org-filename)
+      (load-file el-filename))))
 
-;; Читаем литературный конфиг:
 (my/org-babel-load-file "literate-config")
 (my/org-babel-load-file "aragaers-tweaks")
 (my/org-babel-load-file "rasendubi-slip-boxes")
+
+;; РџРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё С‚РµРјС‹ СЏРІРЅРѕ РЅР°СЃС‚СЂРѕР№С‚Рµ Р»РёС†Р° Р·Р°РіРѕР»РѕРІРєРѕРІ
+;;(add-hook! 'after-load-theme-hook
+;;  (defun my/fix-header-faces ()
+;;    "РСЃРїСЂР°РІР»СЏРµС‚ С„РѕРЅ Р·Р°РіРѕР»РѕРІРєРѕРІ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё С‚РµРјС‹."
+;; РџСЂРёРјРµСЂ РґР»СЏ Org-mode
+;;    (set-face-attribute 'org-level-1 nil :background nil :inherit 'bold)
+;;    (set-face-attribute 'org-level-2 nil :background nil :inherit 'bold)
+;;    (set-face-attribute 'org-level-3 nil :background nil :inherit 'bold)
+;;    (set-face-attribute 'org-document-title nil :background nil :height 1.5)
+;; РџСЂРёРјРµСЂ РґР»СЏ Markdown-mode
+;;    (when (facep 'markdown-header-face-1)
+;;      (set-face-attribute 'markdown-header-face-1 nil :background nil))
+;; Р”РѕР±Р°РІСЊС‚Рµ РґСЂСѓРіРёРµ СЂРµР¶РёРјС‹ РїРѕ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё
+;;    ))
+
+;; Р’С‹Р·РѕРІ С„СѓРЅРєС†РёРё СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РЅР°СЃС‚СЂРѕР№РєРё, РµСЃР»Рё С‚РµРјР° СѓР¶Рµ Р·Р°РіСЂСѓР¶РµРЅР°
+;;(when (and (boundp 'custom-enabled-themes) custom-enabled-themes)
+;;  (my/fix-header-faces))

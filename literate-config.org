@@ -1,14 +1,21 @@
 * Font and coding
 #+BEGIN_SRC  emacs-lisp
-(setq doom-font (font-spec :family "Input" :size 16 :weight 'normal)
-      doom-variable-pitch-font (font-spec :family "Input" :size 17))
+(setq doom-font (font-spec :family "Input" :size 15)
+      doom-variable-pitch-font (font-spec :family "Input" :size 16)
+      doom-unicode-font (font-spec :family "all-the-icons"))
 
-;; (set-clipboard-coding-system 'utf-16le-dos)
 
 (after! unicode-fonts
-  (dolist (unicode-block '("Cyrillic"
-                           "Cyrillic Supplement"))
-      (push "Input" (cadr (assoc unicode-block unicode-fonts-block-font-mapping)))))
+    (dolist (unicode-block '("Cyrillic" "Cyrillic Supplement"))
+        (push "Input" (cadr (assoc unicode-block unicode-fonts-block-font-mapping)))))
+
+;; Принудительная инициализация шрифтов
+;; (setq inhibit-compacting-font-caches t)
+;; (setq font-use-system-font t)
+
+;; Выключаю иконки :(
+(setq doom-modeline-icon nil)       ; Отключить иконки в modeline
+(setq +doom-dashboard-icons nil)    ; Убрать иконки в дашборде
 #+END_SRC
 
 * Input-method
@@ -16,8 +23,24 @@
 (set-input-method 'russian-computer)
 (isearch-toggle-input-method)
 
-(map! "s-SPC" #'toggle-input-method)
-(map! :map evil-ex-search-keymap "s-SPC" #'toggle-input-method)
+;;(map! "s-SPC" #'toggle-input-method)
+;;(map! :map evil-ex-search-keymap "s-SPC" #'toggle-input-method)
+#+end_src
+* Window
+#+begin_src emacs-lisp
+(map! :n "C-h" #'evil-window-left
+      :n "C-j" #'evil-window-down
+      :n "C-k" #'evil-window-up
+      :n "C-l" #'evil-window-right)
+
+(map! :leader
+      "|" #'evil-window-vsplit  ; Создать окно справа (вертикальное разделение)
+      :prefix "w"
+      "o" #'delete-other-windows)
+
+;; Переключение буферов по Shift+H и Shift+L
+(map! :n "H" #'previous-buffer
+      :n "L" #'next-buffer)
 #+end_src
 
 * Org
@@ -26,9 +49,15 @@
 (setq org-directory "~/Yandex.Disk/roam/areas")
 (setq org-agenda-files "~/Yandex.Disk/roam/.agenda_files")
 (setq org-roam-directory "~/Yandex.Disk/roam/")
+
+(defvar my/org-roam-excluded-tags '("highlights" "linked")
+  "List of tags that should exclude a node from Org-roam's database.")
+
 (setq org-roam-db-node-include-function
       (lambda ()
-        (not (member "linked" (org-get-tags)))))
+        (let ((tags (org-get-tags)))
+          (not (cl-some (lambda (tag) (member tag tags))
+                        my/org-roam-excluded-tags)))))
 #+end_src
 
 ** Bullets
@@ -111,9 +140,16 @@
          "* %<%H-%M> %?"
          :if-new
             (file+head "%(concat org-roam-dailies-directory \"/%<%Y-%m-%d>.org\")"
-                    "#+title: %<%Y-%m-%d>\n#+filetags: review"))))
+                    "#+title: %<%Y-%m-%d>"))))
+
+    (setq org-roam-completion-everywhere nil)       ;; Отключить везде
+    (setq org-roam-completion-system 'none)       ;; Никакого дополнения
 )
 #+end_src
+
+#+RESULTS:
+| d | default | entry | * %<%H-%M> %? | :if-new | (file+head %(concat org-roam-dailies-directory "/%<%Y-%m-%d>.org") #+title: %<%Y-%m-%d> |
+
 ** Graph
 #+begin_src emacs-lisp
 (use-package! websocket
@@ -131,67 +167,23 @@
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+end_src
-** Spaced repetition
+** Crypt
 #+begin_src emacs-lisp
-(defun my/space-repeat-if-tag-spaced (e)
-  "Resets the header on the TODO states and increases the date
-according to a suggested spaced repetition interval."
-  (let* ((spaced-rep-map '((0 . "++1d")
-                           (1 . "++2d")
-                           (2 . "++7d")
-                           (3 . "++23d")
-                           (4 . "++60d")
-                           (5 . "++4m")))
-         (spaced-key "spaced")
-         (tags (org-get-tags))
-         (spaced-todo-p (member spaced-key tags))
-         (repetition-n (car (cdr spaced-todo-p)))
-         (n+1 (if repetition-n (+ 1 (string-to-number (substring repetition-n (- (length repetition-n) 1) (length repetition-n)))) 0))
-         (spaced-repetition-p (alist-get n+1 spaced-rep-map))
-         (new-repetition-tag (concat "repetition" (number-to-string n+1)))
-         (new-tags (reverse (if repetition-n
-                                (seq-reduce
-                                 (lambda (a x) (if (string-equal x repetition-n) (cons new-repetition-tag a) (cons x a)))
-                                 tags
-                                 '())
-                              (seq-reduce
-                               (lambda (a x) (if (string-equal x spaced-key) (cons new-repetition-tag (cons x a)) (cons x a)))
-                               tags
-                               '())))))
-    (if (and spaced-todo-p spaced-repetition-p)
-        (progn
-          ;; avoid infinitive looping
-          (remove-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
-          ;; reset to previous state
-          (org-call-with-arg 'org-todo 'left)
-          ;; schedule to next spaced repetition
-          (org-schedule nil (alist-get n+1 spaced-rep-map))
-          ;; rewrite local tags
-          (org-set-tags-to new-tags)
-          (add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced))
-      )))
-
-(add-hook 'org-trigger-hook 'my/space-repeat-if-tag-spaced)
-#+end_src
-* Projectile
-#+begin_src emacs-lisp
-(after! projectile
-(setq projectile-project-search-path '("~/EmacsProjects" "~/PyCharmProjects" "~/arcadia/education/schoolbook"))
-)
-#+end_src
-* PlantUML
-#+begin_src emacs-lisp
-    ;; Sample jar configuration
-    (setq plantuml-jar-path "~/plantuml.jar")
-    (setq plantuml-default-exec-mode 'jar)
-
-    ;; Sample executable configuration
-;;    (setq plantuml-executable-path "/path/to/your/copy/of/plantuml.bin")
-;;    (setq plantuml-default-exec-mode 'executable)
+(org-crypt-use-before-save-magic)
+(setq org-tags-exclude-from-inheritance (quote ("crypt")))
+;; GPG key to use for encryption
+;; Either the Key ID or set to nil to use symmetric encryption.
+(setq org-crypt-key "noblex@yandex-team.ru")
 #+end_src
 * Clipboard
 #+begin_src emacs-lisp
-(setq interprogram-paste-function 'x-cut-buffer-or-selection-value)
+(set-clipboard-coding-system 'utf-8)
+
+(setq interprogram-paste-function 'x-selection-value)
+(setq select-enable-clipboard t)
+(setq select-enable-primary t)
+(setq save-interprogram-paste-before-kill t)
+
 #+end_src
 * Mermaid
 #+begin_src emacs-lisp
@@ -201,4 +193,115 @@ according to a suggested spaced repetition interval."
   :init
   (after! org
     (add-to-list 'org-babel-load-languages '(mermaid . t))))
+#+end_src
+
+* IDE
+** Neotree
+#+begin_src emacs-lisp
+(map! :leader
+      (:prefix "t"
+        :desc "Neotree"
+        :n "n" #'neotree-toggle
+               ))
+
+
+#+end_src
+
+** LSP
+#+begin_src emacs-lisp
+(defun projectile-pyenv-mode-set ()
+  "Set pyenv version matching project name."
+  (let ((project (projectile-project-name)))
+    (if (member project (pyenv-mode-versions))
+        (pyenv-mode-set project)
+      (pyenv-mode-unset))))
+
+(after! pyenv-mode
+  :init
+    (add-hook 'projectile-after-switch-project-hook 'projectile-pyenv-mode-set)
+)
+
+(after! lsp-pylsp
+  (setq lsp-pylsp-plugins-pycode-style-enabled t
+        lsp-pylsp-plugins-flake8-enabled t
+        lsp-pylsp-plugins-pycode-style-quotes "'"
+        lsp-pylsp-plugins-pycode-style-indent-width 4))
+#+end_src
+
+** Project and workspaces
+#+begin_src emacs-lisp
+(after! projectile
+(projectile-register-project-type 'make '("Makefile")
+                                  :project-file "Makefile"
+				  :compile "ya make -r"
+				  :test "make test"
+				  :run "make run")
+)
+#+end_src
+
+** Open in arcanum
+#+begin_src emacs-lisp
+(defun open-in-arcanum ()
+  "Open the current buffer file in arcanum"
+    (interactive)
+    (browse-url (concat
+                "https://a.yandex-team.ru"
+                (substring (buffer-file-name) (length "/home/noblex") nil)
+)))
+
+(map! :leader
+      (:prefix "o"
+        :desc "Open in arcanum"
+        :n "l" #'open-in-arcanum
+               ))
+#+end_src
+
+** Many lines comments
+#+begin_src emacs-lisp
+(map! :leader
+      (:map python-mode-map
+        :prefix "c"
+        :desc "Many lines comment"
+            "m" #'string-rectangle))
+#+end_src
+
+#+RESULTS:
+: string-rectangle
+** Ejc-sql
+#+begin_src emacs-lisp
+(after! ejc-sql
+  :init
+    (setq flycheck-emacs-lisp-load-path 'inherit)
+    (setq clomacs-httpd-default-port 8090) ; Use a port other than 8080.
+    (add-hook 'ejc-sql-connected-hook
+          (lambda ()
+            (ejc-set-fetch-size nil)
+            (ejc-set-max-rows nil)
+            (ejc-set-show-too-many-rows-message nil)
+            (ejc-set-column-width-limit nil)))
+    (setq ejc-result-table-impl 'orgtbl-mode)
+    (setq ejc-org-mode-show-results 't)
+)
+#+end_src
+
+
+* Themes
+#+begin_src emacs-lisp
+(use-package doom-themes
+  :ensure t
+  :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+;;  (load-theme 'doom-dracula t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  ;; Enable custom neotree theme (nerd-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+;;  (setq doom-themes-treemacs-theme "doom-atom") ; use "doom-colors" for less minimal icon theme
+;;  (doom-themes-treemacs-config)
+  ;; Corrects (and improves) org-mode's native fontification.
+ ;; (doom-themes-org-config))
 #+end_src
