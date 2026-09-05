@@ -67,3 +67,4 @@
 (package! flycheck-clj-kondo)
 (package! vterm)
 (package! sly)
+(package! md-roam :recipe (:local-repo "~/.config/doom/local-packages/md-roam"))

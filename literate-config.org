@@ -148,10 +148,98 @@
     (setq org-roam-completion-everywhere nil)       ;; Отключить везде
     (setq org-roam-completion-system 'none)       ;; Никакого дополнения
 )
-#+end_src
+;; Поиск только среди MOC-заметок
+(defun my/org-roam-find-moc ()
+  "Поиск только среди заметок с тегом moc, без подзаголовков и алиасов."
+  (interactive)
+  (let ((org-roam-node-display-template
+         (concat "${title:*} "
+                 (propertize "${tags:10}" 'face 'org-tag)))
+        (org-roam-node-include-aliases nil))
+    (org-roam-node-find
+     nil nil
+     (lambda (node)
+       (and
+        (member "moc" (org-roam-node-tags node))
+        (= (org-roam-node-level node) 0)
+        ;; исключаем алиасы
+        (not (member (org-roam-node-title node)
+                     (org-roam-node-aliases node))))))))
 
-#+RESULTS:
-| d | default | entry | * %<%H-%M> %? | :if-new | (file+head %(concat org-roam-dailies-directory "/%<%Y-%m-%d>.org") #+title: %<%Y-%m-%d> |
+;; Поиск evergreen-заметок
+(defun my/org-roam-find-evergreen ()
+  "Поиск только среди заметок с тегом moc, без подзаголовков и алиасов."
+  (interactive)
+  (let ((org-roam-node-display-template
+         (concat "${title:*} "
+                 (propertize "${tags:10}" 'face 'org-tag)))
+        (org-roam-node-include-aliases nil))
+    (org-roam-node-find
+     nil nil
+     (lambda (node)
+       (and
+        (member "evergreen" (org-roam-node-tags node))
+        (= (org-roam-node-level node) 0)
+        ;; исключаем алиасы
+        (not (member (org-roam-node-title node)
+                     (org-roam-node-aliases node))))))))
+
+;; Поиск осиротевших заметок (без бэклинков)
+(defun my/org-roam-find-orphans ()
+  "Поиск заметок без входящих ссылок."
+  (interactive)
+  (org-roam-node-find
+   nil nil
+   (lambda (node)
+     (= 0 (citar-org-roam--node-backlinks-count node)))))
+
+;; Более надёжный подсчёт бэклинков
+(defun citar-org-roam--node-backlinks-count (node)
+  (let* ((id (org-roam-node-id node))
+         (backlinks (org-roam-db-query
+                     [:select (funcall count source)
+                      :from links
+                      :where (= dest $s1)
+                      :and (= type "id")]
+                     id)))
+    (caar backlinks)))
+
+(defun my/org-roam-moc-stats ()
+  "Показать MOC-заметки и число исходящих ссылок."
+  (interactive)
+  (let* ((moc-nodes (seq-filter
+                     (lambda (node)
+                       (member "moc" (org-roam-node-tags node)))
+                     (org-roam-node-list)))
+         (stats (mapcar
+                 (lambda (node)
+                   (let* ((id (org-roam-node-id node))
+                          (links (org-roam-db-query
+                                  [:select (funcall count dest)
+                                   :from links
+                                   :where (= source $s1)
+                                   :and (= type "id")]
+                                  id)))
+                     (cons (org-roam-node-title node)
+                           (caar links))))
+                 moc-nodes))
+         (sorted (seq-sort-by #'cdr #'> stats)))
+    (with-current-buffer (get-buffer-create "*MOC Stats*")
+      (erase-buffer)
+      (insert "MOC заметка | Исходящих ссылок\n")
+      (insert (make-string 50 ?-) "\n")
+      (dolist (s sorted)
+        (insert (format "%-40s %d\n" (car s) (cdr s))))
+      (switch-to-buffer (current-buffer)))))
+
+(map! :leader
+      (:prefix ("n" . "notes")
+       (:prefix ("r" . "roam")
+        :desc "Find MOC"        "m" #'my/org-roam-find-moc
+        :desc "Find evergreens"        "e" #'my/org-roam-find-evergreen
+        :desc "Find orphans"    "O" #'my/org-roam-find-orphans)))
+
+#+end_src
 
 ** Graph
 #+begin_src emacs-lisp
@@ -170,18 +258,31 @@
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+end_src
-** Crypt
-#+begin_src emacs-lisp
-(org-crypt-use-before-save-magic)
-(setq org-tags-exclude-from-inheritance (quote ("crypt")))
-;; GPG key to use for encryption
-;; Either the Key ID or set to nil to use symmetric encryption.
-(setq org-crypt-key "noblex@yandex-team.ru")
-#+end_src
-** Markdown export
+** Markdown
 #+begin_src emacs-lisp
 (setq org-export-with-sub-superscripts nil)
 #+end_src
+** Tab width
+Doom выставляет глобально =tab-width= 4, а org-парсер требует ровно 8 (иначе
+ругается warning'ом). =org-mode= ставит 8 сам, но md-roam парсит markdown-файлы
+org-парсером для своей БД — а в markdown-буфере =tab-width= остаётся 4. Для md
+в roam-каталоге тоже выставляем 8.
+#+begin_src emacs-lisp
+(advice-add 'org-mode :before
+            (lambda (&rest _) (setq-local tab-width 8)))
+
+(add-hook 'markdown-mode-hook
+          (lambda ()
+            (when (and buffer-file-name
+                       (bound-and-true-p org-roam-directory)
+                       (file-in-directory-p buffer-file-name org-roam-directory))
+              (setq-local tab-width 8))))
+#+end_src
+** Ivy search
+#+begin_src emacs-lisp
+(setq ivy-case-fold-search-default 'always)
+#+end_src
+
 * Clipboard
 #+begin_src emacs-lisp
 (set-clipboard-coding-system 'utf-8)
@@ -274,19 +375,304 @@
 
 #+RESULTS:
 : string-rectangle
-** Ejc-sql
+** Lightweight SQL client
 #+begin_src emacs-lisp
-(after! ejc-sql
-  :init
-    (setq flycheck-emacs-lisp-load-path 'inherit)
-    (setq clomacs-httpd-default-port 8090) ; Use a port other than 8080.
-    (add-hook 'ejc-sql-connected-hook
-          (lambda ()
-            (ejc-set-fetch-size nil)
-            (ejc-set-max-rows nil)
-            (ejc-set-show-too-many-rows-message nil)
-            (ejc-set-column-width-limit nil)))
-    (setq ejc-result-table-impl 'orgtbl-mode)
-    (setq ejc-org-mode-show-results 't)
-)
+(after! auth-source
+  (add-to-list 'auth-sources "~/.authinfo.gpg"))
+
+(after! sql
+  (setq sql-postgres-program "/opt/homebrew/bin/psql"
+        sql-connection-alist
+        '(("pg-ege-local"
+           (sql-product 'postgres)
+           (sql-server "localhost")
+           (sql-port 5442)
+           (sql-user "master")
+           (sql-database "ege_db"))
+          ("pg-ege-testing"
+           (sql-product 'postgres)
+           (sql-server "localhost")
+           (sql-port 18088)
+           (sql-user "noblex")
+           (sql-database "ege_testing"))
+          ("pg-groups-dev"
+           (sql-product 'postgres)
+           (sql-server "localhost")
+           (sql-port 18089)
+           (sql-user "noblex")
+           (sql-database "groups_dev"))
+          ("pg-ege-prod"
+           (sql-product 'postgres)
+           (sql-server "localhost")
+           (sql-port 18090)
+           (sql-user "noblex")
+           (sql-database "ege_db_prod"))))
+
+  (defvar my/sql-tunnel-alist
+    '(("pg-ege-testing"
+       :bastion "db.bastion.yc-yandex-team.cloud.yandex.net"
+       :local-port 18088
+       :remote-host "mdbnlksvvdra8m7mb9vm"
+       :remote-port 6432)
+      ("pg-groups-dev"
+       :bastion "db.bastion.yc-yandex-team.cloud.yandex.net"
+       :local-port 18089
+       :remote-host "mdbnlksvvdra8m7mb9vm"
+       :remote-port 6432)
+      ("pg-ege-prod"
+       :bastion "db.bastion.yc-yandex-team.cloud.yandex.net"
+       :local-port 18090
+       :remote-host "mdb74ifvjhh0kalr0qag"
+       :remote-port 6432))
+    "SSH tunnel settings keyed by SQL connection name.")
+
+  (defvar my/sql-tunnel-processes (make-hash-table :test #'equal)
+    "SSH tunnel processes keyed by SQL connection name.")
+
+  (defun my/sql-secret (connection)
+    "Return the password for CONNECTION from `auth-source'."
+    (let* ((entry (car (auth-source-search
+                        :host connection
+                        :max 1
+                        :require '(:secret))))
+           (secret (plist-get entry :secret)))
+      (cond ((functionp secret) (funcall secret))
+            ((stringp secret) secret)
+            (t (user-error "No password for %s in auth-source" connection)))))
+
+  (defun my/sql-connect (connection)
+    "Connect to a configured SQL CONNECTION using `auth-source'."
+    (interactive
+     (list (completing-read "SQL connection: "
+                            (mapcar #'car sql-connection-alist)
+                            nil t)))
+    (let* ((sql-connection-alist (copy-tree sql-connection-alist))
+           (profile (assoc-string connection sql-connection-alist t)))
+      (setcdr profile
+              (cons `(sql-password ,(my/sql-secret connection))
+                    (cdr profile)))
+      (sql-connect connection)))
+
+  (defun my/sql--port-open-p (port)
+    "Return non-nil when a TCP listener accepts connections on PORT."
+    (condition-case nil
+        (let ((probe (open-network-stream
+                      "sql-tunnel-probe" nil "127.0.0.1" port
+                      :type 'plain)))
+          (delete-process probe)
+          t)
+      (file-error nil)))
+
+  (defun my/sql--tunnel-sentinel (process event)
+    "Remove a stopped tunnel PROCESS from the process registry."
+    (let ((connection (process-get process 'sql-connection)))
+      (unless (process-live-p process)
+        (when (eq process (gethash connection my/sql-tunnel-processes))
+          (remhash connection my/sql-tunnel-processes))
+        (message "SQL tunnel %s: %s" connection (string-trim event)))))
+
+  (defun my/sql--wait-for-tunnel (connection attempts-left)
+    "Wait for CONNECTION tunnel and connect when it becomes ready."
+    (let* ((tunnel (assoc-string connection my/sql-tunnel-alist t))
+           (local-port (plist-get (cdr tunnel) :local-port))
+           (process (gethash connection my/sql-tunnel-processes)))
+      (cond
+       ((my/sql--port-open-p local-port)
+        (message "SQL tunnel %s is ready" connection)
+        (my/sql-connect connection))
+       ((not (process-live-p process))
+        (pop-to-buffer (get-buffer-create "*SQL tunnels*"))
+        (user-error "SQL tunnel %s stopped before becoming ready" connection))
+       ((<= attempts-left 0)
+        (delete-process process)
+        (user-error "Timed out waiting for SQL tunnel %s" connection))
+       (t
+        (run-at-time 0.25 nil #'my/sql--wait-for-tunnel
+                     connection (1- attempts-left))))))
+
+  (defun my/sql-connect-via-bastion (connection)
+    "Start CONNECTION's SSH tunnel and then connect to its database."
+    (interactive
+     (list (completing-read "SQL tunnel: "
+                            (mapcar #'car my/sql-tunnel-alist)
+                            nil t)))
+    (let* ((tunnel (assoc-string connection my/sql-tunnel-alist t))
+           (settings (cdr tunnel))
+           (bastion (plist-get settings :bastion))
+           (local-port (plist-get settings :local-port))
+           (remote-host (plist-get settings :remote-host))
+           (remote-port (plist-get settings :remote-port))
+           (existing (gethash connection my/sql-tunnel-processes)))
+      (cond
+       ((process-live-p existing)
+        (my/sql--wait-for-tunnel connection 40))
+       ((my/sql--port-open-p local-port)
+        (user-error "Port %s is occupied by an unmanaged process" local-port))
+       (t
+        (let ((process
+               (make-process
+                :name (format "sql-tunnel-%s" connection)
+                :buffer (get-buffer-create "*SQL tunnels*")
+                :command
+                (list "ssh" "-N"
+                      "-o" "ExitOnForwardFailure=yes"
+                      "-L" (format "%s:%s:%s"
+                                   local-port remote-host remote-port)
+                      bastion)
+                :noquery t
+                :sentinel #'my/sql--tunnel-sentinel)))
+          (process-put process 'sql-connection connection)
+          (puthash connection process my/sql-tunnel-processes)
+          (message "Starting SQL tunnel %s..." connection)
+          (my/sql--wait-for-tunnel connection 40))))))
+
+  (defun my/sql-disconnect-tunnel (connection)
+    "Stop CONNECTION's SSH tunnel."
+    (interactive
+     (let (connections)
+       (maphash (lambda (name process)
+                  (when (process-live-p process)
+                    (push name connections)))
+                my/sql-tunnel-processes)
+       (unless connections
+         (user-error "No active SQL tunnels"))
+       (list (completing-read "Stop SQL tunnel: " connections nil t))))
+    (let ((process (gethash connection my/sql-tunnel-processes)))
+      (unless (process-live-p process)
+        (user-error "SQL tunnel %s is not running" connection))
+      (delete-process process)
+      (remhash connection my/sql-tunnel-processes)
+      (message "Stopped SQL tunnel %s" connection)))
+
+  (defun my/sql-list-tunnels ()
+    "Display configured SQL tunnels and their current status."
+    (interactive)
+    (with-current-buffer (get-buffer-create "*SQL tunnels status*")
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert (format "%-22s %-10s %s\n" "Connection" "Status" "Forward"))
+      (insert (make-string 72 ?-) "\n")
+      (dolist (tunnel my/sql-tunnel-alist)
+        (let* ((connection (car tunnel))
+               (settings (cdr tunnel))
+               (process (gethash connection my/sql-tunnel-processes)))
+          (insert
+           (format "%-22s %-10s localhost:%s -> %s:%s\n"
+                   connection
+                   (if (process-live-p process) "running" "stopped")
+                   (plist-get settings :local-port)
+                   (plist-get settings :remote-host)
+                   (plist-get settings :remote-port)))))
+      (goto-char (point-min))
+      (special-mode)
+      (pop-to-buffer (current-buffer)))))
+
+(after! org
+  (add-to-list 'org-babel-load-languages '(sql . t)))
+
+(after! ob-sql
+  (defun my/org-babel-sql-with-auth-source (execute body params)
+    "Run an SQL Babel block using its dbconnection's auth-source password."
+    (let ((connection (cdr (assq :dbconnection params))))
+      (unless connection
+        (user-error "Add :dbconnection PROFILE to this SQL block"))
+      (let ((process-environment (copy-sequence process-environment)))
+        ;; ob-sql otherwise places PGPASSWORD in the shell command itself.
+        (setenv "PGPASSWORD" (my/sql-secret connection))
+        (funcall execute body params))))
+
+  (unless (advice-member-p #'my/org-babel-sql-with-auth-source
+                           'org-babel-execute:sql)
+    (advice-add 'org-babel-execute:sql
+                :around #'my/org-babel-sql-with-auth-source)))
+
+(map! :leader
+      :desc "Connect to SQL database"
+      "o d" #'my/sql-connect
+      :desc "Connect to SQL via bastion"
+      "o D" #'my/sql-connect-via-bastion
+      :desc "Stop SQL tunnel"
+      "o k" #'my/sql-disconnect-tunnel
+      :desc "List SQL tunnels"
+      "o t" #'my/sql-list-tunnels)
+
+#+end_src
+
+** Opencode
+#+begin_src emacs-lisp
+(defun my/opencode-in-project ()
+  "Open opencode in the current project root using vterm."
+  (interactive)
+  (let* ((default-directory
+           (or (doom-project-root)
+               default-directory))
+         (buffer-name "*opencode*"))
+    (unless (executable-find "opencode")
+      (user-error "Executable 'opencode' not found in PATH"))
+    (require 'vterm)
+    (let ((buf (get-buffer-create buffer-name)))
+      (with-current-buffer buf
+        (unless (derived-mode-p 'vterm-mode)
+          (vterm-mode)))
+      (pop-to-buffer buf)
+      (with-current-buffer buf
+        (goto-char (point-max))
+        (vterm-send-string "opencode")
+        (vterm-send-return)))))
+
+(defun my/opencode-file ()
+  "Run opencode with current file."
+  (interactive)
+  (unless buffer-file-name
+    (user-error "Current buffer is not visiting a file"))
+  (let ((default-directory (or (doom-project-root) default-directory)))
+    (require 'vterm)
+    (vterm "*opencode-file*")
+    (vterm-send-string
+     (format "opencode %s" (shell-quote-argument buffer-file-name)))
+    (vterm-send-return)))
+
+(map! :leader
+      (:prefix ("c" . "code/ai")
+       :desc "OpenCode here" "o" #'my/opencode-in-project
+       :desc "OpenCode current file" "f" #'my/opencode-file))
+
+#+end_src
+
+* Remote (TRAMP)
+** Основные настройки
+#+begin_src emacs-lisp
+(setq tramp-default-method "ssh")
+(setq tramp-verbose 1)
+(setq tramp-use-ssh-controlmaster-options t) ; переиспользовать ssh-соединение
+(setq remote-file-name-inhibit-cache 60)      ; кэш метаданных файлов на 60с
+(setq vc-ignore-dir-regexp
+      (format "\\(%s\\)\\|\\(%s\\)"
+              vc-ignore-dir-regexp
+              tramp-file-name-regexp))        ; не дёргать vc за метаданными по ssh
+(setq tramp-completion-reread-directory-timeout nil)
+#+end_src
+
+** Projectile
+#+begin_src emacs-lisp
+(after! projectile
+  (setq projectile-file-exists-remote-cache-expire (* 10 60)
+        projectile-mode-line-function (lambda () " Projectile"))) ; убрать медленный подсчёт файлов в modeline
+#+end_src
+
+** LSP
+#+begin_src emacs-lisp
+(setq read-process-output-max (* 1024 1024)) ; 1mb — меньше лагов при большом выводе lsp
+(after! lsp-mode
+  (setq lsp-enable-file-watchers nil    ; file-watchers через tramp не работают/дороги
+        lsp-log-io nil))
+
+;; На VM стоит только pylsp (см. codenv/setup.d/40-install-lsp-server), а pyright
+;; там нет. lsp-mode клонирует каждый клиент в "-tramp"-версию с тем же приоритетом,
+;; поэтому remote-клиент pyright-tramp (priority 2) перебивает pylsp-tramp (priority -1)
+;; и лезет за несуществующим на VM pyright-langserver. Отключаем pyright на remote.
+(add-hook! '(python-mode-local-vars-hook python-ts-mode-local-vars-hook)
+  (defun +lsp-prefer-pylsp-on-remote-h ()
+    (when (file-remote-p default-directory)
+      (setq-local lsp-disabled-clients '(pyright pyright-remote pyright-tramp)))))
 #+end_src
